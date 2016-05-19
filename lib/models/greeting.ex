@@ -4,6 +4,37 @@ defmodule ElixirZeroMQ.Greeting do
             mechanism: "NULL",
             as_server: false,
             filler: <<0::size(31)-unit(8)>>
+
+  def parse(binary_greeting) do
+    <<
+      signature::size(10)-unit(8)-binary,
+      version::size(2)-unit(8)-binary,
+      mechanism::size(20)-unit(8)-binary,
+      as_server::size(1)-unit(8)-binary,
+      filler::size(31)-unit(8)-binary
+    >> = binary_greeting
+
+    %__MODULE__{
+      signature: signature,
+      version: parse_version(version),
+      mechanism: parse_mechanism(mechanism),
+      as_server: parse_as_server(as_server),
+      filler: filler
+    }
+  end
+
+  defp parse_version(version) do
+    <<major::size(1)-unit(8), minor::size(1)-unit(8)>> = version
+    "#{to_string(major)}.#{to_string(minor)}"
+  end
+
+  defp parse_mechanism(mechanism) do
+    String.rstrip(mechanism, 0x00)
+  end
+
+  defp parse_as_server(as_server) do
+    as_server == <<1>>
+  end
 end
 
 defimpl String.Chars, for: ElixirZeroMQ.Greeting do

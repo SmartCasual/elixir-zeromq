@@ -82,6 +82,13 @@ defmodule ElixirZeroMQ.GreetingTest do
     assert parsed_greeting(greeting)[:version] == <<4,5>>
   end
 
+  test "parsing binary greetings", context do
+    binary_greeting = to_string(context[:default_greeting])
+    struct_greeting = ElixirZeroMQ.Greeting.parse(binary_greeting)
+
+    assert struct_greeting == context[:default_greeting]
+  end
+
   defp parsed_greeting(greeting) do
     <<
       signature::size(10)-unit(8)-binary,
