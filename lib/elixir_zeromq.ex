@@ -9,6 +9,7 @@ defmodule ElixirZeroMQ do
     children = [
       # Define workers and child supervisors to be supervised
       # worker(ElixirZeroMQ.Worker, [arg1, arg2, arg3]),
+      supervisor(ElixirZeroMQ.Connection.Supervisor, []),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
