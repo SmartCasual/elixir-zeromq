@@ -91,11 +91,11 @@ defmodule ElixirZeroMQ.GreetingTest do
 
   defp parsed_greeting(greeting) do
     <<
-      signature::size(10)-unit(8)-binary,
-      version::size(2)-unit(8)-binary,
-      mechanism::size(20)-unit(8)-binary,
-      as_server::size(1)-unit(8)-binary,
-      filler::size(31)-unit(8)-binary
+      signature::binary-size(10),
+      version::binary-size(2),
+      mechanism::binary-size(20),
+      as_server::binary-size(1),
+      filler::binary-size(31)
     >> = to_string(greeting)
 
     %{

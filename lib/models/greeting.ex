@@ -1,17 +1,17 @@
 defmodule ElixirZeroMQ.Greeting do
-  defstruct signature: <<0xff,0::size(8)-unit(8),0x7f>>,
+  defstruct signature: <<0xff, 0::8 * 8, 0x7f>>,
             version: "3.1",
             mechanism: "NULL",
             as_server: false,
-            filler: <<0::size(31)-unit(8)>>
+            filler: <<0::31 * 8>>
 
   def parse(binary_greeting) do
     <<
-      signature::size(10)-unit(8)-binary,
-      version::size(2)-unit(8)-binary,
-      mechanism::size(20)-unit(8)-binary,
-      as_server::size(1)-unit(8)-binary,
-      filler::size(31)-unit(8)-binary
+      signature::binary-size(10),
+      version::binary-size(2),
+      mechanism::binary-size(20),
+      as_server::binary-size(1),
+      filler::binary-size(31),
     >> = binary_greeting
 
     %__MODULE__{
@@ -19,12 +19,12 @@ defmodule ElixirZeroMQ.Greeting do
       version: parse_version(version),
       mechanism: parse_mechanism(mechanism),
       as_server: parse_as_server(as_server),
-      filler: filler
+      filler: filler,
     }
   end
 
   defp parse_version(version) do
-    <<major::size(1)-unit(8), minor::size(1)-unit(8)>> = version
+    <<major::integer, minor::integer>> = version
     "#{to_string(major)}.#{to_string(minor)}"
   end
 
@@ -39,13 +39,13 @@ end
 
 defimpl String.Chars, for: ElixirZeroMQ.Greeting do
   def to_string(greeting) do
-    [
-      greeting.signature,
-      version(greeting),
-      mechanism(greeting),
-      as_server(greeting),
-      greeting.filler,
-    ] |> IO.iodata_to_binary
+    <<
+      greeting.signature::binary,
+      version(greeting)::binary,
+      mechanism(greeting)::binary,
+      as_server(greeting)::binary,
+      greeting.filler::binary,
+    >>
   end
 
   defp mechanism(greeting) do
@@ -53,7 +53,7 @@ defimpl String.Chars, for: ElixirZeroMQ.Greeting do
     mechanism_length = byte_size(mechanism_string)
     padding_length = 20 - mechanism_length
 
-    [mechanism_string, <<0::unit(8)-size(padding_length)>>]
+    <<mechanism_string::binary, <<0::unit(8)-size(padding_length)>> >>
   end
 
   defp as_server(greeting) do
@@ -63,7 +63,6 @@ defimpl String.Chars, for: ElixirZeroMQ.Greeting do
   defp version(greeting) do
     [major, minor] = String.split(greeting.version, ".")
 
-    [String.to_integer(major), String.to_integer(minor)]
-      |> IO.iodata_to_binary
+    <<String.to_integer(major), String.to_integer(minor)>>
   end
 end
