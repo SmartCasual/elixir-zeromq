@@ -15,7 +15,7 @@ defmodule ElixirZeroMQ.CommandTest do
     {:ok,
       short_command: %ElixirZeroMQ.Command{
         name: "SHORTCOMMAND",
-        data: "Here is some data under 255 bytes",
+        data: short_text,
       },
       long_command: %ElixirZeroMQ.Command{
         name: "LONGCOMMAND",
@@ -32,68 +32,28 @@ defmodule ElixirZeroMQ.CommandTest do
     assert parsed_command(context[:long_command])[:name_size] == 11
   end
 
-  test "marks the command as either long or short", context do
-    assert parsed_command(context[:short_command])[:command_size_type] == :short
-    assert parsed_command(context[:long_command])[:command_size_type] == :long
-  end
-
   test "encodes the command data", context do
     assert parsed_command(context[:short_command])[:data] == context[:short_command].data
     assert parsed_command(context[:long_command])[:data] == context[:long_command].data
   end
 
-  test "parsing binary short commands", context do
-    binary_command = to_string(context[:short_command])
-    struct_command = ElixirZeroMQ.Command.parse(binary_command)
-
-    assert struct_command == context[:short_command]
-  end
-
-  test "parsing binary long commands", context do
-    binary_command = to_string(context[:long_command])
-    struct_command = ElixirZeroMQ.Command.parse(binary_command)
-
-    assert struct_command == context[:long_command]
-  end
-
   defp parsed_command(command) do
     case to_string(command) do
       <<
-        0x04,
-        size::1 * 8,
         name_size::1 * 8,
         name::binary-size(name_size),
         data::binary,
       >> ->
-        data_size = size - name_size - 1
-        <<data::binary-size(data_size)>> = data
-
         %{
-          command_size_type: :short,
-          command_size: size,
-          name_size: name_size,
-          name: name,
-          data: data,
-        }
-
-      <<
-        0x06,
-        size::8 * 8,
-        name_size::1 * 8,
-        name::binary-size(name_size),
-        data::binary,
-      >> ->
-        data_size = size - name_size - 1
-        <<data::binary-size(data_size)>> = data
-
-        %{
-          command_size_type: :long,
-          command_size: size,
           name_size: name_size,
           name: name,
           data: data,
         }
     end
+  end
+
+  defp short_text do
+    "Here is some data under 255 bytes"
   end
 
   defp loads_of_text do
