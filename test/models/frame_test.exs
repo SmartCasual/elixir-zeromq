@@ -144,6 +144,16 @@ defmodule ElixirZeroMQ.FrameTest do
     assert struct_command == context[:long_command]
   end
 
+  test "returns :error extracting flags from no data" do
+    result = ElixirZeroMQ.Frame.extract_flags_and_size(<<>>)
+    assert result == :error
+  end
+
+  test "returns :error extracting flags from incomplete data" do
+    result = ElixirZeroMQ.Frame.extract_flags_and_size(<<1>>)
+    assert result == :error
+  end
+
   defp short_text do
     "Here is some data under 255 bytes"
   end

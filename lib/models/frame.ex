@@ -20,16 +20,35 @@ defmodule ElixirZeroMQ.Frame do
   @long_flag 0b010
   @command_flag 0b100
 
+  @doc """
+  Extracts flags map and body size from a (possible incomplete)
+  frame blob.
+
+  Returns `{flags_map, size, remainder}` if complete enough to
+  parse, otherwise returns `:error`.
+  """
   def extract_flags_and_size(<<flags_byte, blob::binary>>) do
     flags = parse_flags(flags_byte)
 
     if flags[:long] do
-      <<size::8 * 8, remainder::binary>> = blob
+      case blob do
+        <<size::8 * 8, remainder::binary>> ->
+          {flags, size, remainder}
+        _ ->
+          :error
+      end
     else
-      <<size::integer, remainder::binary>> = blob
+      case blob do
+        <<size::integer, remainder::binary>> ->
+          {flags, size, remainder}
+        _ ->
+          :error
+      end
     end
+  end
 
-    {flags, size, remainder}
+  def extract_flags_and_size(_) do
+    :error
   end
 
   defp parse_flags(flags_byte) do
