@@ -98,42 +98,48 @@ defmodule ElixirZeroMQ.FrameTest do
 
   test "parsing binary short messages", context do
     binary_message = ElixirZeroMQ.Frame.encode_message(context[:short_message])
-    struct_message = ElixirZeroMQ.Frame.parse(binary_message)
+    {flags, _size, frame_body} = ElixirZeroMQ.Frame.extract_flags_and_size(binary_message)
+    struct_message = ElixirZeroMQ.Frame.parse(flags, frame_body)
 
     assert struct_message == context[:short_message]
   end
 
   test "parsing binary long messages", context do
     binary_message = ElixirZeroMQ.Frame.encode_message(context[:long_message])
-    struct_message = ElixirZeroMQ.Frame.parse(binary_message)
+    {flags, _size, frame_body} = ElixirZeroMQ.Frame.extract_flags_and_size(binary_message)
+    struct_message = ElixirZeroMQ.Frame.parse(flags, frame_body)
 
     assert struct_message == context[:long_message]
   end
 
   test "parsing binary short final messages", context do
     binary_message = ElixirZeroMQ.Frame.encode_message(context[:short_final_message])
-    struct_message = ElixirZeroMQ.Frame.parse(binary_message)
+    {flags, _size, frame_body} = ElixirZeroMQ.Frame.extract_flags_and_size(binary_message)
+    struct_message = ElixirZeroMQ.Frame.parse(flags, frame_body)
 
     assert struct_message == context[:short_final_message]
   end
 
   test "parsing binary long final messages", context do
     binary_message = ElixirZeroMQ.Frame.encode_message(context[:long_final_message])
-    struct_message = ElixirZeroMQ.Frame.parse(binary_message)
+    {flags, _size, frame_body} = ElixirZeroMQ.Frame.extract_flags_and_size(binary_message)
+    struct_message = ElixirZeroMQ.Frame.parse(flags, frame_body)
 
     assert struct_message == context[:long_final_message]
   end
 
   test "parsing binary short commands", context do
     binary_command = ElixirZeroMQ.Frame.encode_command(context[:short_command])
-    struct_command = ElixirZeroMQ.Frame.parse(binary_command)
+    {flags, _size, frame_body} = ElixirZeroMQ.Frame.extract_flags_and_size(binary_command)
+    struct_command = ElixirZeroMQ.Frame.parse(flags, frame_body)
 
     assert struct_command == context[:short_command]
   end
 
   test "parsing binary long commands", context do
     binary_command = ElixirZeroMQ.Frame.encode_command(context[:long_command])
-    struct_command = ElixirZeroMQ.Frame.parse(binary_command)
+    {flags, _size, frame_body} = ElixirZeroMQ.Frame.extract_flags_and_size(binary_command)
+    struct_command = ElixirZeroMQ.Frame.parse(flags, frame_body)
 
     assert struct_command == context[:long_command]
   end

@@ -1,24 +1,10 @@
 defmodule ElixirZeroMQ.Frame do
-  use Bitwise
-
   defstruct body: nil,
             command: false,
             long: false,
             more: false
 
-  @more_flag 0b001
-  @long_flag 0b010
-  @command_flag 0b100
-
-  def parse(<<flags_byte, remainder::binary>>) do
-    flags = parse_flags(flags_byte)
-
-    if flags[:long] do
-      <<size::8 * 8, body::binary-size(size)>> = remainder
-    else
-      <<size::integer, body::binary-size(size)>> = remainder
-    end
-
+  def parse(flags, body) do
     if flags[:command] do
       ElixirZeroMQ.Command.parse(body)
     else
@@ -27,6 +13,23 @@ defmodule ElixirZeroMQ.Frame do
         more: flags[:more],
       }
     end
+  end
+
+  use Bitwise
+  @more_flag 0b001
+  @long_flag 0b010
+  @command_flag 0b100
+
+  def extract_flags_and_size(<<flags_byte, blob::binary>>) do
+    flags = parse_flags(flags_byte)
+
+    if flags[:long] do
+      <<size::8 * 8, remainder::binary>> = blob
+    else
+      <<size::integer, remainder::binary>> = blob
+    end
+
+    {flags, size, remainder}
   end
 
   defp parse_flags(flags_byte) do
