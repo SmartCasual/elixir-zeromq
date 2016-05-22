@@ -6,6 +6,7 @@ defmodule ZeroMQ.ConnectionTest do
 
     mock_security_mechanism_callback = fn command ->
       send test_process, {:processed_command, command}
+      {:ok, :complete}
     end
 
     mock_delivery_callback = fn message ->
@@ -23,6 +24,14 @@ defmodule ZeroMQ.ConnectionTest do
       security_mechanism_callback: mock_security_mechanism_callback,
       command: %ZeroMQ.Command{name: "SHORTCOMMAND", data: "Short text"},
       message: %ZeroMQ.Message{body: "Short message"},
+      valid_security_command: %ZeroMQ.Command{name: "VALIDCREDS", data: "letmein"},
+      simple_security_callback: fn command ->
+        if command.name == "VALIDCREDS" and command.data == "letmein" do
+          {:ok, :complete}
+        else
+          {:error}
+        end
+      end
     }
   end
 
@@ -36,6 +45,9 @@ defmodule ZeroMQ.ConnectionTest do
   end
 
   test "messages are processed by the provided security mechanism callback", context do
+    command_frame = ZeroMQ.Frame.encode_command(context[:command])
+    ZeroMQ.Connection.notify(context[:connection], command_frame)
+
     message = context[:message]
     message_frame = ZeroMQ.Frame.encode_message(message)
 
@@ -45,6 +57,9 @@ defmodule ZeroMQ.ConnectionTest do
   end
 
   test "partial data is processed as it completes", context do
+    command_frame = ZeroMQ.Frame.encode_command(context[:command])
+    ZeroMQ.Connection.notify(context[:connection], command_frame)
+
     message = context[:message]
     message_frame = ZeroMQ.Frame.encode_message(message)
 
@@ -59,6 +74,9 @@ defmodule ZeroMQ.ConnectionTest do
   end
 
   test "multiple messages are processed together", context do
+    command_frame = ZeroMQ.Frame.encode_command(context[:command])
+    ZeroMQ.Connection.notify(context[:connection], command_frame)
+
     message = context[:message]
     message_frame = ZeroMQ.Frame.encode_message(message)
 
@@ -70,5 +88,25 @@ defmodule ZeroMQ.ConnectionTest do
 
     assert_received {:delivered_message, ^message}
     assert_received {:processed_command, ^command}
+  end
+
+  test "will only forward messages after security has passed", context do
+    {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      message_delivery: context[:delivery_callback],
+      security_mechanism: context[:simple_security_callback],
+    })
+
+    message = context[:message]
+    message_frame = ZeroMQ.Frame.encode_message(message)
+
+    ZeroMQ.Connection.notify(connection, message_frame)
+
+    refute_received {:delivered_message, ^message}
+
+    security_frame = ZeroMQ.Frame.encode_command(context[:valid_security_command])
+    ZeroMQ.Connection.notify(connection, security_frame)
+
+    ZeroMQ.Connection.notify(connection, message_frame)
+    assert_received {:delivered_message, ^message}
   end
 end
