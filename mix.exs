@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.Mixfile do
+defmodule ZeroMQ.Mixfile do
   use Mix.Project
 
   def project do
@@ -15,7 +15,7 @@ defmodule ElixirZeroMQ.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger],
-     mod: {ElixirZeroMQ, []}]
+     mod: {ZeroMQ, []}]
   end
 
   # Dependencies can be Hex packages:

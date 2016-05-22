@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.Frame do
+defmodule ZeroMQ.Frame do
   defstruct body: nil,
             command: false,
             long: false,
@@ -6,9 +6,9 @@ defmodule ElixirZeroMQ.Frame do
 
   def parse(flags, body) do
     if flags[:command] do
-      ElixirZeroMQ.Command.parse(body)
+      ZeroMQ.Command.parse(body)
     else
-      %ElixirZeroMQ.Message{
+      %ZeroMQ.Message{
         body: body,
         more: flags[:more],
       }

@@ -1,3 +1,3 @@
-defmodule ElixirZeroMQ.Connection do
+defmodule ZeroMQ.Connection do
   use GenServer
 end

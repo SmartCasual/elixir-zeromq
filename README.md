@@ -1,4 +1,4 @@
-# ElixirZeroMQ
+# ZeroMQ
 
 **TODO: Add description**
 

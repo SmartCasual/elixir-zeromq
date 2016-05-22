@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.Connection.Supervisor do
+defmodule ZeroMQ.Connection.Supervisor do
   use Supervisor
 
   @name __MODULE__
@@ -13,7 +13,7 @@ defmodule ElixirZeroMQ.Connection.Supervisor do
 
   def init(:ok) do
     children = [
-      worker(ElixirZeroMQ.Connection, [], restart: :temporary)
+      worker(ZeroMQ.Connection, [], restart: :temporary)
     ]
 
     supervise(children, strategy: :simple_one_for_one)

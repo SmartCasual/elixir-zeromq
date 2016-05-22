@@ -1,22 +1,22 @@
-defmodule ElixirZeroMQ.MetadataTest do
+defmodule ZeroMQ.MetadataTest do
   use ExUnit.Case, async: true
 
   test ".encode explodes without binary blobs" do
     assert_raise ArgumentError, fn ->
-      ElixirZeroMQ.Metadata.encode(%{
+      ZeroMQ.Metadata.encode(%{
         123 => "value",
       })
     end
 
     assert_raise ArgumentError, fn ->
-      ElixirZeroMQ.Metadata.encode(%{
+      ZeroMQ.Metadata.encode(%{
         "key" => 123,
       })
     end
   end
 
   test "encodes maps of strings sorted alphabetically" do
-    encoded_metadata = ElixirZeroMQ.Metadata.encode(%{
+    encoded_metadata = ZeroMQ.Metadata.encode(%{
       "Server-Type" => "Some Server Type",
       "Identity" => "12",
     })

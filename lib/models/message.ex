@@ -1,9 +1,9 @@
-defmodule ElixirZeroMQ.Message do
+defmodule ZeroMQ.Message do
   defstruct body: nil,
             more: false
 end
 
-defimpl String.Chars, for: ElixirZeroMQ.Message do
+defimpl String.Chars, for: ZeroMQ.Message do
   def to_string(message) do
     unless is_binary(message.body) do
       raise ArgumentError, message: "Message body must be a binary blob"

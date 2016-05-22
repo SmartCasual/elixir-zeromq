@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.Metadata do
+defmodule ZeroMQ.Metadata do
   def encode(metadata) do
     sorted_keys = Map.keys(metadata) |> Enum.sort
 

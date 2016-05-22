@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.FrameSplitter do
+defmodule ZeroMQ.FrameSplitter do
   @moduledoc """
   A GenServer which when fed a stream of binaries
   will split out ZeroMQ frames and return the binary
@@ -58,7 +58,7 @@ defmodule ElixirZeroMQ.FrameSplitter do
 
   defp extract_frame_body(flags, size, stream, frame_bodies) do
     if size == nil || flags == nil do
-      working_parts = ElixirZeroMQ.Frame.extract_flags_and_size(stream)
+      working_parts = ZeroMQ.Frame.extract_flags_and_size(stream)
     else
       working_parts = {flags, size, stream}
     end

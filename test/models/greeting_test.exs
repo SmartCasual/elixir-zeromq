@@ -1,8 +1,8 @@
-defmodule ElixirZeroMQ.GreetingTest do
+defmodule ZeroMQ.GreetingTest do
   use ExUnit.Case, async: true
 
   setup do
-    {:ok, default_greeting: %ElixirZeroMQ.Greeting{}}
+    {:ok, default_greeting: %ZeroMQ.Greeting{}}
   end
 
   test "default signature", context do
@@ -50,7 +50,7 @@ defmodule ElixirZeroMQ.GreetingTest do
   end
 
   test "presented mechanism is autopadded to 20 bytes" do
-    greeting = %ElixirZeroMQ.Greeting{mechanism: "10BYTE_STR"}
+    greeting = %ZeroMQ.Greeting{mechanism: "10BYTE_STR"}
 
     expected_mechanism = <<
       "10BYTE_STR",
@@ -69,7 +69,7 @@ defmodule ElixirZeroMQ.GreetingTest do
   end
 
   test "presented as_server when true" do
-    greeting = %ElixirZeroMQ.Greeting{as_server: true}
+    greeting = %ZeroMQ.Greeting{as_server: true}
     assert parsed_greeting(greeting)[:as_server] == <<1>>
   end
 
@@ -78,13 +78,13 @@ defmodule ElixirZeroMQ.GreetingTest do
   end
 
   test "presented version when set" do
-    greeting = %ElixirZeroMQ.Greeting{version: "4.5"}
+    greeting = %ZeroMQ.Greeting{version: "4.5"}
     assert parsed_greeting(greeting)[:version] == <<4,5>>
   end
 
   test "parsing binary greetings", context do
     binary_greeting = to_string(context[:default_greeting])
-    struct_greeting = ElixirZeroMQ.Greeting.parse(binary_greeting)
+    struct_greeting = ZeroMQ.Greeting.parse(binary_greeting)
 
     assert struct_greeting == context[:default_greeting]
   end

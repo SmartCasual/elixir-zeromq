@@ -1,23 +1,23 @@
-defmodule ElixirZeroMQ.CommandTest do
+defmodule ZeroMQ.CommandTest do
   use ExUnit.Case, async: true
 
   test "to_string explodes without binary blobs" do
     assert_raise ArgumentError, fn ->
-      to_string %ElixirZeroMQ.Command{name: 123}
+      to_string %ZeroMQ.Command{name: 123}
     end
 
     assert_raise ArgumentError, fn ->
-      to_string %ElixirZeroMQ.Command{data: 123}
+      to_string %ZeroMQ.Command{data: 123}
     end
   end
 
   setup do
     {:ok,
-      short_command: %ElixirZeroMQ.Command{
+      short_command: %ZeroMQ.Command{
         name: "SHORTCOMMAND",
         data: short_text,
       },
-      long_command: %ElixirZeroMQ.Command{
+      long_command: %ZeroMQ.Command{
         name: "LONGCOMMAND",
         data: loads_of_text,
       },

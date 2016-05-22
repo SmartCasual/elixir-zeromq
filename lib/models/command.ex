@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.Command do
+defmodule ZeroMQ.Command do
   defstruct name: nil,
             data: nil
 
@@ -10,7 +10,7 @@ defmodule ElixirZeroMQ.Command do
   end
 end
 
-defimpl String.Chars, for: ElixirZeroMQ.Command do
+defimpl String.Chars, for: ZeroMQ.Command do
   def to_string(command) do
     unless is_binary(command.name) and is_binary(command.data) do
       raise ArgumentError, message: "Commands require binary names and data blobs"

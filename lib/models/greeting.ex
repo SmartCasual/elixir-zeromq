@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ.Greeting do
+defmodule ZeroMQ.Greeting do
   defstruct signature: <<0xff, 0::8 * 8, 0x7f>>,
             version: "3.1",
             mechanism: "NULL",
@@ -37,7 +37,7 @@ defmodule ElixirZeroMQ.Greeting do
   end
 end
 
-defimpl String.Chars, for: ElixirZeroMQ.Greeting do
+defimpl String.Chars, for: ZeroMQ.Greeting do
   def to_string(greeting) do
     <<
       greeting.signature::binary,

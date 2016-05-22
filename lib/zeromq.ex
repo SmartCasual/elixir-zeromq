@@ -1,4 +1,4 @@
-defmodule ElixirZeroMQ do
+defmodule ZeroMQ do
   use Application
 
   # See http://elixir-lang.org/docs/stable/elixir/Application.html
@@ -8,13 +8,13 @@ defmodule ElixirZeroMQ do
 
     children = [
       # Define workers and child supervisors to be supervised
-      # worker(ElixirZeroMQ.Worker, [arg1, arg2, arg3]),
-      supervisor(ElixirZeroMQ.Connection.Supervisor, []),
+      # worker(ZeroMQ.Worker, [arg1, arg2, arg3]),
+      supervisor(ZeroMQ.Connection.Supervisor, []),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: ElixirZeroMQ.Supervisor]
+    opts = [strategy: :one_for_one, name: ZeroMQ.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

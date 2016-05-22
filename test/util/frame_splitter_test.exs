@@ -1,11 +1,11 @@
-defmodule ElixirZeroMQ.FrameSplitterTest do
+defmodule ZeroMQ.FrameSplitterTest do
   use ExUnit.Case, async: true
 
   setup do
     short_frame = <<0x00, 10, "0123456789">>
     long_frame = <<0x02, byte_size(loads_of_text)::8 * 8, loads_of_text::binary>>
 
-    {:ok, splitter} = ElixirZeroMQ.FrameSplitter.start_link
+    {:ok, splitter} = ZeroMQ.FrameSplitter.start_link
 
     {:ok,
       splitter: splitter,
@@ -15,12 +15,12 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
   end
 
   test "works if provided an exact frame", context do
-    {:ok, 1} = ElixirZeroMQ.FrameSplitter.add_binary(
+    {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(
       context[:splitter],
       context[:short_frame]
     )
 
-    {:ok, {flags, frame_body}, 0} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -32,12 +32,12 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
   end
 
   test "works if provided a long frame", context do
-    {:ok, 1} = ElixirZeroMQ.FrameSplitter.add_binary(
+    {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(
       context[:splitter],
       context[:long_frame]
     )
 
-    {:ok, {flags, frame_body}, 0} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -51,10 +51,10 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
   test "works if provided a frame over multiple calls", context do
     <<first_part::binary-size(5), second_part::binary>> = context[:short_frame]
 
-    {:ok, 0} = ElixirZeroMQ.FrameSplitter.add_binary(context[:splitter], first_part)
-    {:ok, 1} = ElixirZeroMQ.FrameSplitter.add_binary(context[:splitter], second_part)
+    {:ok, 0} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], first_part)
+    {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], second_part)
 
-    {:ok, {flags, frame_body}, 0} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -66,10 +66,10 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
   end
 
   test "providing multiple frames over multiple calls", context do
-    {:ok, 1} = ElixirZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:short_frame])
-    {:ok, 2} = ElixirZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:long_frame])
+    {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:short_frame])
+    {:ok, 2} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:long_frame])
 
-    {:ok, {flags, frame_body}, 1} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 1} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -78,7 +78,7 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
     }
     assert frame_body == "0123456789"
 
-    {:ok, {flags, frame_body}, 0} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -91,9 +91,9 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
 
   test "providing multiple frames over one call", context do
     combined_frames = context[:short_frame] <> context[:long_frame]
-    {:ok, 2} = ElixirZeroMQ.FrameSplitter.add_binary(context[:splitter], combined_frames)
+    {:ok, 2} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], combined_frames)
 
-    {:ok, {flags, frame_body}, 1} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 1} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -102,7 +102,7 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
     }
     assert frame_body == "0123456789"
 
-    {:ok, {flags, frame_body}, 0} = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -114,7 +114,7 @@ defmodule ElixirZeroMQ.FrameSplitterTest do
   end
 
   test ".fetch returns `:empty` if no completed frame bodies available", context do
-    result = ElixirZeroMQ.FrameSplitter.fetch(context[:splitter])
+    result = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert result == :empty
   end
