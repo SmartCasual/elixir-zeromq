@@ -14,13 +14,13 @@ defmodule ZeroMQ.FrameSplitterTest do
     }
   end
 
-  test "works if provided an exact frame", context do
+  test "providing an exact frame", context do
     {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(
       context[:splitter],
       context[:short_frame]
     )
 
-    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, [{flags, frame_body}]} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -31,13 +31,13 @@ defmodule ZeroMQ.FrameSplitterTest do
     assert frame_body == "0123456789"
   end
 
-  test "works if provided a long frame", context do
+  test "providing a long frame", context do
     {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(
       context[:splitter],
       context[:long_frame]
     )
 
-    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, [{flags, frame_body}]} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -48,13 +48,13 @@ defmodule ZeroMQ.FrameSplitterTest do
     assert frame_body == loads_of_text
   end
 
-  test "works if provided a frame over multiple calls", context do
+  test "providing a frame over multiple calls", context do
     <<first_part::binary-size(5), second_part::binary>> = context[:short_frame]
 
     {:ok, 0} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], first_part)
     {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], second_part)
 
-    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, [{flags, frame_body}]} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
     assert flags == %{
       command: false,
@@ -69,54 +69,58 @@ defmodule ZeroMQ.FrameSplitterTest do
     {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:short_frame])
     {:ok, 2} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:long_frame])
 
-    {:ok, {flags, frame_body}, 1} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok,
+      [
+        {flags_1, frame_body_1},
+        {flags_2, frame_body_2},
+      ]
+    } = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
-    assert flags == %{
+    assert flags_1 == %{
       command: false,
       long: false,
       more: false,
     }
-    assert frame_body == "0123456789"
+    assert frame_body_1 == "0123456789"
 
-    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
-
-    assert flags == %{
+    assert flags_2 == %{
       command: false,
       long: true,
       more: false,
     }
-
-    assert frame_body == loads_of_text
+    assert frame_body_2 == loads_of_text
   end
 
   test "providing multiple frames over one call", context do
     combined_frames = context[:short_frame] <> context[:long_frame]
     {:ok, 2} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], combined_frames)
 
-    {:ok, {flags, frame_body}, 1} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok,
+      [
+        {flags_1, frame_body_1},
+        {flags_2, frame_body_2},
+      ]
+    } = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
-    assert flags == %{
+    assert flags_1 == %{
       command: false,
       long: false,
       more: false,
     }
-    assert frame_body == "0123456789"
+    assert frame_body_1 == "0123456789"
 
-    {:ok, {flags, frame_body}, 0} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
-
-    assert flags == %{
+    assert flags_2 == %{
       command: false,
       long: true,
       more: false,
     }
-
-    assert frame_body == loads_of_text
+    assert frame_body_2 == loads_of_text
   end
 
-  test ".fetch returns `:empty` if no completed frame bodies available", context do
-    result = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+  test ".fetch returns an empty list if no completed frame bodies available", context do
+    {:ok, list} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
 
-    assert result == :empty
+    assert list == []
   end
 
   defp loads_of_text do

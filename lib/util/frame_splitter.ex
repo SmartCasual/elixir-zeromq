@@ -16,16 +16,15 @@ defmodule ZeroMQ.FrameSplitter do
 
   @doc """
   Adds the provided binary blob to the current stream.
-  Returns `{:ok, flags, frame_blob}` if the full frame is available,
-  otherwise requests more data by returning `{:ok, :more}`.
+  Returns `{:ok, count_of_full_frames_ready}`.
   """
   def add_binary(splitter, blob) do
     GenServer.call(splitter, {:add_binary, blob})
   end
 
   @doc """
-  Returns the oldest frame body and flags as `{:ok, flags, frame_body, remaining_count}`
-  if available, otherwise returns `:empty`.
+  Returns the (possibly empty) list of complete frame bodies and flags
+  as `{:ok, [{flags, frame_body}, ..]}`.
   """
   def fetch(splitter) do
     GenServer.call(splitter, :fetch)
@@ -48,12 +47,7 @@ defmodule ZeroMQ.FrameSplitter do
   end
 
   def handle_call(:fetch, _from, {size, flags, stream, frame_bodies}) do
-    case :queue.out(frame_bodies) do
-      {{:value, frame_body_and_flags}, frame_bodies} ->
-        {:reply, {:ok, frame_body_and_flags, :queue.len(frame_bodies)}, {size, flags, stream, frame_bodies}}
-      {:empty, frame_bodies} ->
-        {:reply, :empty, {size, flags, stream, frame_bodies}}
-    end
+    {:reply, {:ok, :queue.to_list(frame_bodies)}, {size, flags, stream, frame_bodies}}
   end
 
   defp extract_frame_body(flags, size, stream, frame_bodies) do
