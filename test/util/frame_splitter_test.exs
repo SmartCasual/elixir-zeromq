@@ -123,6 +123,14 @@ defmodule ZeroMQ.FrameSplitterTest do
     assert list == []
   end
 
+  test ".fetch empties the stored messages when called", context do
+    {:ok, 1} = ZeroMQ.FrameSplitter.add_binary(context[:splitter], context[:short_frame])
+    {:ok, _list} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+    {:ok, list} = ZeroMQ.FrameSplitter.fetch(context[:splitter])
+
+    assert list == []
+  end
+
   defp loads_of_text do
     """
     Sed posuere consectetur est at lobortis. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Nullam id dolor id nibh ultricies vehicula ut id elit. Nullam quis risus eget urna mollis ornare vel eu leo. Cras mattis consectetur purus sit amet fermentum.

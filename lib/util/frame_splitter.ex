@@ -47,7 +47,7 @@ defmodule ZeroMQ.FrameSplitter do
   end
 
   def handle_call(:fetch, _from, {size, flags, stream, frame_bodies}) do
-    {:reply, {:ok, :queue.to_list(frame_bodies)}, {size, flags, stream, frame_bodies}}
+    {:reply, {:ok, :queue.to_list(frame_bodies)}, {size, flags, stream, :queue.new}}
   end
 
   defp extract_frame_body(flags, size, stream, frame_bodies) do
