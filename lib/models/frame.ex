@@ -68,7 +68,7 @@ defmodule ZeroMQ.Frame do
   end
 
   defp encode(body, more: more, command: command) do
-    unless is_binary(body) do
+    unless is_binary(body) and body != "" do
       raise ArgumentError, message: "Frame body must be a binary blob"
     end
 
