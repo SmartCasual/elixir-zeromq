@@ -51,11 +51,12 @@ defmodule ZeroMQ.FrameSplitter do
   end
 
   defp extract_frame_body(flags, size, stream, frame_bodies) do
-    if size == nil || flags == nil do
-      working_parts = ZeroMQ.Frame.extract_flags_and_size(stream)
-    else
-      working_parts = {flags, size, stream}
-    end
+    working_parts =
+      if size == nil || flags == nil do
+        ZeroMQ.Frame.extract_flags_and_size(stream)
+      else
+        {flags, size, stream}
+      end
 
     if working_parts == :error do
       if byte_size(stream) == 0 do

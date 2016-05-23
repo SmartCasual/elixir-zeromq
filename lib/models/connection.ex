@@ -51,10 +51,10 @@ defmodule ZeroMQ.Connection do
 
     frame_is_command = flags[:command]
 
-    if frame_is_command do
-      new_phase = process_command(frame, current_phase, callbacks[:security_mechanism])
+    new_phase = if frame_is_command do
+      process_command(frame, current_phase, callbacks[:security_mechanism])
     else
-      new_phase = current_phase
+      current_phase
     end
 
     case new_phase do
