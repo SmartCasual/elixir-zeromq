@@ -39,8 +39,14 @@ defmodule ZeroMQ.Connection do
     {:ok, frames} = ZeroMQ.FrameSplitter.fetch(splitter)
 
     new_phase = process_next_frame(frames, phase, callbacks)
+    state = {callbacks, splitter, new_phase}
 
-    {:reply, :ok, {callbacks, splitter, new_phase}}
+    case new_phase do
+      {:abort, reason} ->
+        {:stop, "Closing connection", {:closed, reason}, state}
+      _ ->
+        {:reply, :ok, state}
+    end
   end
 
   defp process_next_frame([], new_phase, _) do
@@ -52,7 +58,7 @@ defmodule ZeroMQ.Connection do
     frame_is_command = flags[:command]
 
     new_phase = if frame_is_command do
-      process_command(frame, current_phase, callbacks[:security_mechanism])
+      process_command(frame, current_phase, callbacks)
     else
       current_phase
     end
@@ -61,19 +67,23 @@ defmodule ZeroMQ.Connection do
       :ready when not frame_is_command ->
         callbacks[:message_delivery].(frame)
       :abort ->
-        callbacks[:abort].()
-        ZeroMQ.Connection.stop(self())
+        callbacks[:connection_abort].(frame)
       _ -> nil
     end
 
     process_next_frame(remainder, new_phase, callbacks)
   end
 
-  defp process_command(frame, current_phase, security_mechanism) do
-    case security_mechanism.(frame) do
+  defp process_command(frame, current_phase, callbacks) do
+    case callbacks[:security_mechanism].(frame) do
       {:ok, :complete} -> :ready
       {:ok, :incomplete} -> current_phase
-      {:error} -> :abort
+      {:error, reason} ->
+        error_command = %ZeroMQ.Command{name: "ERROR", data: reason}
+        error_frame = ZeroMQ.Frame.encode_command(error_command)
+        callbacks[:peer_delivery].(error_frame)
+
+        {:abort, reason}
     end
   end
 end

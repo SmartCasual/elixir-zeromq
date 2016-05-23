@@ -13,15 +13,27 @@ defmodule ZeroMQ.ConnectionTest do
       send test_process, {:delivered_message, message}
     end
 
+    mock_peer_callback = fn frame_blob ->
+      send test_process, {:sent_to_peer, frame_blob}
+    end
+
+    mock_abort_callback = fn frame ->
+      send test_process, {:disconnected, frame}
+    end
+
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       message_delivery: mock_delivery_callback,
-      security_mechanism: mock_security_mechanism_callback
+      security_mechanism: mock_security_mechanism_callback,
+      connection_abort: mock_abort_callback,
+      peer_delivery: mock_peer_callback,
     })
 
     {:ok,
       connection: connection,
       delivery_callback: mock_delivery_callback,
       security_mechanism_callback: mock_security_mechanism_callback,
+      abort_callback: mock_abort_callback,
+      peer_delivery_callback: mock_peer_callback,
       command: %ZeroMQ.Command{name: "SHORTCOMMAND", data: "Short text"},
       message: %ZeroMQ.Message{body: "Short message"},
       valid_security_command: %ZeroMQ.Command{name: "VALIDCREDS", data: "letmein"},
@@ -29,9 +41,10 @@ defmodule ZeroMQ.ConnectionTest do
         if command.name == "VALIDCREDS" and command.data == "letmein" do
           {:ok, :complete}
         else
-          {:error}
+          {:error, "Incorrect credentials"}
         end
-      end
+      end,
+      failing_security_callback: fn _command -> {:error, "Denied!"} end,
     }
   end
 
@@ -108,5 +121,26 @@ defmodule ZeroMQ.ConnectionTest do
 
     ZeroMQ.Connection.notify(connection, message_frame)
     assert_received {:delivered_message, ^message}
+  end
+
+  test "failing security sends an error command to the peer and aborts", context do
+    {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      message_delivery: context[:delivery_callback],
+      security_mechanism: context[:failing_security_callback],
+      connection_abort: context[:abort_callback],
+      peer_delivery: context[:peer_delivery_callback],
+    })
+
+    Process.unlink(connection)
+
+    security_frame = ZeroMQ.Frame.encode_command(context[:command])
+
+    ZeroMQ.Connection.notify(connection, security_frame)
+
+    refute Process.alive?(connection)
+
+    error_command = %ZeroMQ.Command{name: "ERROR", data: "Denied!"}
+    error_frame = ZeroMQ.Frame.encode_command(error_command)
+    assert_received {:sent_to_peer, ^error_frame}
   end
 end
