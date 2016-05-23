@@ -20,8 +20,8 @@ defmodule ZeroMQ.Connection do
   Adds the provided binary blob to the current stream and processes resulting
   complete frames using the callbacks provided during initialization.
 
-  Processes commands via `security_mechanism.process_command(frame)`.
-  Delivers messages via `delivery_callback.(frame)`.
+  Processes commands via `callbacks[:security_mechanism].(frame)`.
+  Delivers messages via `callbacks[:message_delivery].(frame)`.
 
   Returns `:ok`.
   """
