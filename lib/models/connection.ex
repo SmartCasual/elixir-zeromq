@@ -40,6 +40,8 @@ defmodule ZeroMQ.Connection do
   end
 
   def init(callbacks) do
+    callbacks[:peer_delivery].(to_string(%ZeroMQ.Greeting{}))
+
     {:ok, splitter} = ZeroMQ.FrameSplitter.start_link
     {:ok, {callbacks, splitter, :preauth}}
   end

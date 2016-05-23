@@ -105,6 +105,7 @@ defmodule ZeroMQ.ConnectionTest do
 
   test "will only receive messages after security has passed", context do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      peer_delivery: context[:peer_delivery_callback],
       message_delivery: context[:delivery_callback],
       security_mechanism: context[:simple_security_callback],
     })
@@ -162,5 +163,17 @@ defmodule ZeroMQ.ConnectionTest do
 
     ZeroMQ.Connection.transmit_message(connection, message)
     assert_received {:sent_to_peer, ^message_frame}
+  end
+
+  test "immediately sends the greeting on creation" do
+    binary_greeting = <<
+      0xff, 0::8 * 8, 0x7f,
+      3, 1,
+      "NULL", 0::16 * 8,
+      0,
+      0::31 * 8,
+    >>
+
+    assert_received {:sent_to_peer, ^binary_greeting}
   end
 end
