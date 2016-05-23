@@ -103,7 +103,7 @@ defmodule ZeroMQ.ConnectionTest do
     assert_received {:processed_command, ^command}
   end
 
-  test "will only forward messages after security has passed", context do
+  test "will only receive messages after security has passed", context do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       message_delivery: context[:delivery_callback],
       security_mechanism: context[:simple_security_callback],
@@ -142,5 +142,25 @@ defmodule ZeroMQ.ConnectionTest do
     error_command = %ZeroMQ.Command{name: "ERROR", data: "Denied!"}
     error_frame = ZeroMQ.Frame.encode_command(error_command)
     assert_received {:sent_to_peer, ^error_frame}
+  end
+
+  test "transmits messages after security has passed", context do
+    {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      peer_delivery: context[:peer_delivery_callback],
+      security_mechanism: context[:simple_security_callback],
+    })
+
+    message = context[:message]
+    message_frame = ZeroMQ.Frame.encode_message(message)
+
+    ZeroMQ.Connection.transmit_message(connection, message)
+
+    refute_received {:sent_to_peer, ^message_frame}
+
+    security_frame = ZeroMQ.Frame.encode_command(context[:valid_security_command])
+    ZeroMQ.Connection.notify(connection, security_frame)
+
+    ZeroMQ.Connection.transmit_message(connection, message)
+    assert_received {:sent_to_peer, ^message_frame}
   end
 end

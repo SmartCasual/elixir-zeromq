@@ -29,9 +29,28 @@ defmodule ZeroMQ.Connection do
     GenServer.call(connection, {:notify, raw_binary})
   end
 
+  @doc """
+  Encodes the provided message into a frame and sends it via the provided peer
+  delivery callback.
+
+  Returns `:ok`.
+  """
+  def transmit_message(connection, message) do
+    GenServer.call(connection, {:transmit_message, message})
+  end
+
   def init(callbacks) do
     {:ok, splitter} = ZeroMQ.FrameSplitter.start_link
     {:ok, {callbacks, splitter, :preauth}}
+  end
+
+  def handle_call({:transmit_message, message}, _from, {callbacks, splitter, phase}) do
+    if phase == :ready do
+      message_frame = ZeroMQ.Frame.encode_message(message)
+      callbacks[:peer_delivery].(message_frame)
+    end
+
+    {:reply, :ok, {callbacks, splitter, phase}}
   end
 
   def handle_call({:notify, raw_binary}, _from, {callbacks, splitter, phase}) do
