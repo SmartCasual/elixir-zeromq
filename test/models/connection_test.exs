@@ -124,6 +124,7 @@ defmodule ZeroMQ.ConnectionTest do
     assert_received {:delivered_message, ^message}
   end
 
+  @tag :capture_log
   test "failing security sends an error command to the peer and aborts", context do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       message_delivery: context[:delivery_callback],
