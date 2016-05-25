@@ -9,11 +9,11 @@ defmodule ZeroMQ.Connection do
   @doc """
   Starts the connection with no security or confidentiality by default.
   """
-  def start_link(callbacks) do
+  def start_link(callbacks, greeting \\ ZeroMQ.NullSecurityMechanism.greeting) do
     callbacks = Map.put_new(callbacks,
       :security_mechanism, &ZeroMQ.NullSecurityMechanism.process_command/1
     )
-    GenServer.start_link(__MODULE__, callbacks, [])
+    GenServer.start_link(__MODULE__, {callbacks, greeting}, [])
   end
 
   @doc """
@@ -39,8 +39,8 @@ defmodule ZeroMQ.Connection do
     GenServer.call(connection, {:transmit_message, message})
   end
 
-  def init(callbacks) do
-    callbacks[:peer_delivery].(to_string(%ZeroMQ.Greeting{}))
+  def init({callbacks, greeting}) do
+    callbacks[:peer_delivery].(to_string(greeting))
 
     {:ok, splitter} = ZeroMQ.FrameSplitter.start_link
     {:ok, {callbacks, splitter, :preauth}}
