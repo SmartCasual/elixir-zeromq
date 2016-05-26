@@ -11,7 +11,8 @@ defmodule ZeroMQ.GreetingTest do
   end
 
   test "default version", context do
-    assert context[:default_greeting].version == "3.1"
+    assert context[:default_greeting].major_version == 3
+    assert context[:default_greeting].minor_version == 1
   end
 
   test "default mechanism", context do
@@ -78,7 +79,7 @@ defmodule ZeroMQ.GreetingTest do
   end
 
   test "presented version when set" do
-    greeting = %ZeroMQ.Greeting{version: "4.5"}
+    greeting = %ZeroMQ.Greeting{major_version: 4, minor_version: 5}
     assert parsed_greeting(greeting)[:version] == <<4,5>>
   end
 
