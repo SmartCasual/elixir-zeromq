@@ -1,6 +1,8 @@
 defmodule ZeroMQ.ConnectionTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   setup do
     test_process = self()
 
@@ -21,12 +23,16 @@ defmodule ZeroMQ.ConnectionTest do
       send test_process, {:disconnected, frame}
     end
 
+    greeting = %ZeroMQ.Greeting{}
+
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       message_delivery: mock_delivery_callback,
       security_mechanism: mock_security_mechanism_callback,
       connection_abort: mock_abort_callback,
       peer_delivery: mock_peer_callback,
-    })
+    }, greeting)
+
+    ZeroMQ.Connection.notify(connection, to_string(greeting))
 
     {:ok,
       connection: connection,
@@ -108,7 +114,9 @@ defmodule ZeroMQ.ConnectionTest do
       peer_delivery: context[:peer_delivery_callback],
       message_delivery: context[:delivery_callback],
       security_mechanism: context[:simple_security_callback],
-    })
+    }, %ZeroMQ.Greeting{})
+
+    ZeroMQ.Connection.notify(connection, to_string(%ZeroMQ.Greeting{}))
 
     message = context[:message]
     message_frame = ZeroMQ.Frame.encode_message(message)
@@ -124,14 +132,15 @@ defmodule ZeroMQ.ConnectionTest do
     assert_received {:delivered_message, ^message}
   end
 
-  @tag :capture_log
   test "failing security sends an error command to the peer and aborts", context do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       message_delivery: context[:delivery_callback],
       security_mechanism: context[:failing_security_callback],
       connection_abort: context[:abort_callback],
       peer_delivery: context[:peer_delivery_callback],
-    })
+    }, %ZeroMQ.Greeting{})
+
+    ZeroMQ.Connection.notify(connection, to_string(%ZeroMQ.Greeting{}))
 
     Process.unlink(connection)
 
@@ -150,7 +159,9 @@ defmodule ZeroMQ.ConnectionTest do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       peer_delivery: context[:peer_delivery_callback],
       security_mechanism: context[:simple_security_callback],
-    })
+    }, %ZeroMQ.Greeting{})
+
+    ZeroMQ.Connection.notify(connection, to_string(%ZeroMQ.Greeting{}))
 
     message = context[:message]
     message_frame = ZeroMQ.Frame.encode_message(message)
@@ -176,5 +187,65 @@ defmodule ZeroMQ.ConnectionTest do
     >>
 
     assert_received {:sent_to_peer, ^binary_greeting}
+  end
+
+  test "aborts if peer has the wrong version", context do
+    {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      connection_abort: context[:abort_callback],
+      peer_delivery: context[:peer_delivery_callback],
+    }, %ZeroMQ.Greeting{})
+
+    Process.unlink(connection)
+
+    v2_greeting = to_string(%ZeroMQ.Greeting{major_version: 2})
+    ZeroMQ.Connection.notify(connection, v2_greeting)
+
+    refute Process.alive?(connection)
+
+    error_command = %ZeroMQ.Command{name: "ERROR", data: "This peer only supports ZeroMQ 3.x"}
+    error_frame = ZeroMQ.Frame.encode_command(error_command)
+    assert_received {:sent_to_peer, ^error_frame}
+  end
+
+  test "aborts if peer has an unsupported security mechanism", context do
+    {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      connection_abort: context[:abort_callback],
+      peer_delivery: context[:peer_delivery_callback],
+    }, %ZeroMQ.Greeting{})
+
+    Process.unlink(connection)
+
+    v2_greeting = to_string(%ZeroMQ.Greeting{mechanism: "SOMETHING_ELSE"})
+    ZeroMQ.Connection.notify(connection, v2_greeting)
+
+    refute Process.alive?(connection)
+
+    error_command = %ZeroMQ.Command{
+      name: "ERROR",
+      data: "This peer only supports the NULL security mechanism",
+    }
+    error_frame = ZeroMQ.Frame.encode_command(error_command)
+    assert_received {:sent_to_peer, ^error_frame}
+  end
+
+  test "aborts if peer incorrectly configures for the NULL security mechanism", context do
+    {:ok, connection} = ZeroMQ.Connection.start_link(%{
+      connection_abort: context[:abort_callback],
+      peer_delivery: context[:peer_delivery_callback],
+    }, %ZeroMQ.Greeting{})
+
+    Process.unlink(connection)
+
+    v2_greeting = to_string(%ZeroMQ.Greeting{as_server: true})
+    ZeroMQ.Connection.notify(connection, v2_greeting)
+
+    refute Process.alive?(connection)
+
+    error_command = %ZeroMQ.Command{
+      name: "ERROR",
+      data: "The as-server flag must be `false` when using the NULL security mechanism",
+    }
+    error_frame = ZeroMQ.Frame.encode_command(error_command)
+    assert_received {:sent_to_peer, ^error_frame}
   end
 end
