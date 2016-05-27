@@ -32,27 +32,34 @@ defmodule ZeroMQ.NullSecurityMechanism do
       callbacks[:peer_delivery].(ready_command(metadata))
     end
 
-    {:ok, {metadata, peer_type, callbacks, :unready}}
+    state = %ZeroMQ.NullSecurityMechanismState{
+      metadata: metadata,
+      peer_type: peer_type,
+      callbacks: callbacks,
+      phase: :unready,
+    }
+
+    {:ok, state}
   end
 
-  def handle_call({:process_command, command}, _from, {metadata, peer_type, callbacks, phase}) do
-    if phase == :unready and command.name == "READY" do
+  def handle_call({:process_command, command}, _from, state) do
+    if state.phase == :unready and command.name == "READY" do
       peer_metadata = ZeroMQ.Metadata.parse(command.data)
 
-      if ZeroMQ.SocketTypes.valid_combination?(metadata["Socket-Type"], peer_metadata["Socket-Type"]) do
-        if peer_type == :binding do
-          callbacks[:peer_delivery].(ready_command(metadata))
+      if ZeroMQ.SocketTypes.valid_combination?(state.metadata["Socket-Type"], peer_metadata["Socket-Type"]) do
+        if state.peer_type == :binding do
+          state.callbacks[:peer_delivery].(ready_command(state.metadata))
         end
 
-        {:reply, {:ok, :complete}, {metadata, peer_type, callbacks, :ready}}
+        {:reply, {:ok, :complete}, %{state | phase: :ready}}
       else
-        {:reply, {:error, "Invalid socket type combination"}, {metadata, peer_type, callbacks, :abort}}
+        {:reply, {:error, "Invalid socket type combination"}, %{state | phase: :abort}}
       end
     else
-      if phase == :ready do
-        {:reply, {:ok, :complete}, {metadata, peer_type, callbacks, phase}}
+      if state.phase == :ready do
+        {:reply, {:ok, :complete}, state}
       else
-        {:reply, {:ok, :incomplete}, {metadata, peer_type, callbacks, phase}}
+        {:reply, {:ok, :incomplete}, state}
       end
     end
   end
