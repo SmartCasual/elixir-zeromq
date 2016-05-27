@@ -30,4 +30,13 @@ defmodule ZeroMQ.MetadataTest do
 
     assert encoded_metadata == expected_encoding
   end
+
+  test "parses binary blobs" do
+    metadata = %{
+      "Server-Type" => "Some Server Type",
+      "Identity" => "12",
+    }
+
+    assert ZeroMQ.Metadata.parse(ZeroMQ.Metadata.encode(metadata)) == metadata
+  end
 end

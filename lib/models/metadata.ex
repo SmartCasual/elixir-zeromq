@@ -13,4 +13,21 @@ defmodule ZeroMQ.Metadata do
       list ++ [byte_size(key), key, <<byte_size(value)::4 * 8>>, value]
     end) |> IO.iodata_to_binary
   end
+
+  def parse(binary) do
+    parse(%{}, binary)
+  end
+  def parse(map, <<>>) do
+    map
+  end
+  def parse(map, binary) do
+    <<
+      key_size, key::binary-size(key_size),
+      value_size::4 * 8, value::binary-size(value_size),
+      remainder::binary
+    >> = binary
+
+    Map.put(map, key, value)
+      |> parse(remainder)
+  end
 end
