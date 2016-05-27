@@ -6,8 +6,8 @@ defmodule ZeroMQ.ConnectionTest do
   setup do
     test_process = self()
 
-    mock_security_mechanism_callback = fn command ->
-      send test_process, {:processed_command, command}
+    mock_security_mechanism_callback = fn command, socket_type ->
+      send test_process, {:processed_command, command, socket_type}
       {:ok, :complete}
     end
 
@@ -24,13 +24,14 @@ defmodule ZeroMQ.ConnectionTest do
     end
 
     greeting = %ZeroMQ.Greeting{}
+    socket_type = "PAIR"
 
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       message_delivery: mock_delivery_callback,
       security_mechanism: mock_security_mechanism_callback,
       connection_abort: mock_abort_callback,
       peer_delivery: mock_peer_callback,
-    }, greeting)
+    }, greeting, socket_type)
 
     ZeroMQ.Connection.notify(connection, to_string(greeting))
 
@@ -43,24 +44,26 @@ defmodule ZeroMQ.ConnectionTest do
       command: %ZeroMQ.Command{name: "SHORTCOMMAND", data: "Short text"},
       message: %ZeroMQ.Message{body: "Short message"},
       valid_security_command: %ZeroMQ.Command{name: "VALIDCREDS", data: "letmein"},
-      simple_security_callback: fn command ->
+      simple_security_callback: fn command, _peer_type ->
         if command.name == "VALIDCREDS" and command.data == "letmein" do
           {:ok, :complete}
         else
           {:error, "Incorrect credentials"}
         end
       end,
-      failing_security_callback: fn _command -> {:error, "Denied!"} end,
+      failing_security_callback: fn _command, _peer_type -> {:error, "Denied!"} end,
+      socket_type: socket_type,
     }
   end
 
   test "commands are processed by the provided security mechanism callback", context do
+    socket_type = context[:socket_type]
     command = context[:command]
     command_frame = ZeroMQ.Frame.encode_command(command)
 
     ZeroMQ.Connection.notify(context[:connection], command_frame)
 
-    assert_received {:processed_command, ^command}
+    assert_received {:processed_command, ^command, ^socket_type}
   end
 
   test "messages are processed by the provided security mechanism callback", context do
@@ -105,8 +108,10 @@ defmodule ZeroMQ.ConnectionTest do
     combined_frames = message_frame <> command_frame
     ZeroMQ.Connection.notify(context[:connection], combined_frames)
 
+    socket_type = context[:socket_type]
+
     assert_received {:delivered_message, ^message}
-    assert_received {:processed_command, ^command}
+    assert_received {:processed_command, ^command, ^socket_type}
   end
 
   test "will only receive messages after security has passed", context do
@@ -114,7 +119,7 @@ defmodule ZeroMQ.ConnectionTest do
       peer_delivery: context[:peer_delivery_callback],
       message_delivery: context[:delivery_callback],
       security_mechanism: context[:simple_security_callback],
-    }, %ZeroMQ.Greeting{})
+    }, %ZeroMQ.Greeting{}, context[:socket_type])
 
     ZeroMQ.Connection.notify(connection, to_string(%ZeroMQ.Greeting{}))
 
@@ -138,7 +143,7 @@ defmodule ZeroMQ.ConnectionTest do
       security_mechanism: context[:failing_security_callback],
       connection_abort: context[:abort_callback],
       peer_delivery: context[:peer_delivery_callback],
-    }, %ZeroMQ.Greeting{})
+    }, %ZeroMQ.Greeting{}, context[:socket_type])
 
     ZeroMQ.Connection.notify(connection, to_string(%ZeroMQ.Greeting{}))
 
@@ -159,7 +164,7 @@ defmodule ZeroMQ.ConnectionTest do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       peer_delivery: context[:peer_delivery_callback],
       security_mechanism: context[:simple_security_callback],
-    }, %ZeroMQ.Greeting{})
+    }, %ZeroMQ.Greeting{}, context[:socket_type])
 
     ZeroMQ.Connection.notify(connection, to_string(%ZeroMQ.Greeting{}))
 
@@ -193,7 +198,7 @@ defmodule ZeroMQ.ConnectionTest do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       connection_abort: context[:abort_callback],
       peer_delivery: context[:peer_delivery_callback],
-    }, %ZeroMQ.Greeting{})
+    }, %ZeroMQ.Greeting{}, context[:socket_type])
 
     Process.unlink(connection)
 
@@ -211,7 +216,7 @@ defmodule ZeroMQ.ConnectionTest do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       connection_abort: context[:abort_callback],
       peer_delivery: context[:peer_delivery_callback],
-    }, %ZeroMQ.Greeting{})
+    }, %ZeroMQ.Greeting{}, context[:socket_type])
 
     Process.unlink(connection)
 
@@ -232,7 +237,7 @@ defmodule ZeroMQ.ConnectionTest do
     {:ok, connection} = ZeroMQ.Connection.start_link(%{
       connection_abort: context[:abort_callback],
       peer_delivery: context[:peer_delivery_callback],
-    }, %ZeroMQ.Greeting{})
+    }, %ZeroMQ.Greeting{}, context[:socket_type])
 
     Process.unlink(connection)
 
