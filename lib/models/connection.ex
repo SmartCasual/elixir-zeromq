@@ -40,28 +40,36 @@ defmodule ZeroMQ.Connection do
     callbacks[:peer_delivery].(to_string(greeting))
 
     {:ok, splitter} = ZeroMQ.FrameSplitter.start_link
-    {:ok, {callbacks, splitter, socket_type, :pregreets}}
+
+    state = %ZeroMQ.ConnectionState{
+      callbacks: callbacks,
+      splitter: splitter,
+      socket_type: socket_type,
+      phase: :pregreets,
+    }
+
+    {:ok, state}
   end
 
-  def handle_call({:transmit_message, message}, _from, {callbacks, splitter, socket_type, phase}) do
-    if phase == :ready do
+  def handle_call({:transmit_message, message}, _from, state) do
+    if state.phase == :ready do
       message_frame = ZeroMQ.Frame.encode_message(message)
-      callbacks[:peer_delivery].(message_frame)
+      state.callbacks[:peer_delivery].(message_frame)
     end
 
-    {:reply, :ok, {callbacks, splitter, socket_type, phase}}
+    {:reply, :ok, state}
   end
 
-  def handle_call({:notify, raw_binary}, _from, {callbacks, splitter, socket_type, phase}) do
-    case phase do
+  def handle_call({:notify, raw_binary}, _from, state) do
+    case state.phase do
       :pregreets ->
-        process_greeting(raw_binary, callbacks, splitter, socket_type, phase)
+        process_greeting(raw_binary, state)
       _ ->
-        process_frame(raw_binary, callbacks, splitter, socket_type, phase)
+        process_frame(raw_binary, state)
     end
   end
 
-  defp process_greeting(raw_binary, callbacks, splitter, socket_type, phase) do
+  defp process_greeting(raw_binary, state) do
     greeting = ZeroMQ.Greeting.parse(raw_binary)
 
     failure_reason = cond do
@@ -76,19 +84,20 @@ defmodule ZeroMQ.Connection do
     end
 
     if failure_reason do
-      abort_connection(failure_reason, callbacks[:peer_delivery])
-      {:stop, "Closing connection", {:closed, failure_reason}, {callbacks, splitter, socket_type, phase}}
+      abort_connection(failure_reason, state.callbacks[:peer_delivery])
+      {:stop, "Closing connection", {:closed, failure_reason}, state}
     else
-      {:reply, :ok, {callbacks, splitter, socket_type, :handshake}}
+      state = %{state | phase: :handshake}
+      {:reply, :ok, state}
     end
   end
 
-  defp process_frame(raw_binary, callbacks, splitter, socket_type, phase) do
-    {:ok, _frames_available} = ZeroMQ.FrameSplitter.add_binary(splitter, raw_binary)
-    {:ok, frames} = ZeroMQ.FrameSplitter.fetch(splitter)
+  defp process_frame(raw_binary, state) do
+    {:ok, _frames_available} = ZeroMQ.FrameSplitter.add_binary(state.splitter, raw_binary)
+    {:ok, frames} = ZeroMQ.FrameSplitter.fetch(state.splitter)
 
-    new_phase = process_next_frame(frames, phase, socket_type, callbacks)
-    state = {callbacks, splitter, socket_type, new_phase}
+    new_phase = process_next_frame(frames, state)
+    state = %{state | phase: new_phase}
 
     case new_phase do
       {:abort, reason} ->
@@ -98,37 +107,37 @@ defmodule ZeroMQ.Connection do
     end
   end
 
-  defp process_next_frame([], new_phase, _, _) do
+  defp process_next_frame([], %{phase: new_phase}) do
     new_phase
   end
-  defp process_next_frame([{flags, frame_body} | remainder], current_phase, socket_type, callbacks) do
+  defp process_next_frame([{flags, frame_body} | remainder], state) do
     frame = ZeroMQ.Frame.parse(flags, frame_body)
 
     frame_is_command = flags[:command]
 
     new_phase = if frame_is_command do
-      process_command(frame, current_phase, socket_type, callbacks)
+      process_command(frame, state)
     else
-      current_phase
+      state.phase
     end
 
     case new_phase do
       :ready when not frame_is_command ->
-        callbacks[:message_delivery].(frame)
+        state.callbacks[:message_delivery].(frame)
       :abort ->
-        callbacks[:connection_abort].(frame)
+        state.callbacks[:connection_abort].(frame)
       _ -> nil
     end
 
-    process_next_frame(remainder, new_phase, socket_type, callbacks)
+    process_next_frame(remainder, %{state | phase: new_phase})
   end
 
-  defp process_command(command, current_phase, socket_type, callbacks) do
-    case callbacks[:security_mechanism].(command, socket_type) do
+  defp process_command(command, state) do
+    case state.callbacks[:security_mechanism].(command, state.socket_type) do
       {:ok, :complete} -> :ready
-      {:ok, :incomplete} -> current_phase
+      {:ok, :incomplete} -> state.phase
       {:error, reason} ->
-        abort_connection(reason, callbacks[:peer_delivery])
+        abort_connection(reason, state.callbacks[:peer_delivery])
         {:abort, reason}
     end
   end
