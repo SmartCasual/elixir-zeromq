@@ -40,10 +40,12 @@ defmodule ZeroMQ.Connection do
     callbacks[:peer_delivery].(to_string(greeting))
 
     {:ok, splitter} = ZeroMQ.FrameSplitter.start_link
+    {:ok, heartbeat} = ZeroMQ.Heartbeat.start_link(callbacks)
 
     state = %ZeroMQ.ConnectionState{
       callbacks: callbacks,
       splitter: splitter,
+      heartbeat: heartbeat,
       socket_type: socket_type,
       phase: :pregreets,
     }
@@ -61,6 +63,8 @@ defmodule ZeroMQ.Connection do
   end
 
   def handle_call({:notify, raw_binary}, _from, state) do
+    ZeroMQ.Heartbeat.traffic_received(state.heartbeat)
+
     case state.phase do
       :pregreets ->
         process_greeting(raw_binary, state)
@@ -133,12 +137,16 @@ defmodule ZeroMQ.Connection do
   end
 
   defp process_command(command, state) do
-    case state.callbacks[:security_mechanism].(command, state.socket_type) do
-      {:ok, :complete} -> :ready
-      {:ok, :incomplete} -> state.phase
-      {:error, reason} ->
-        abort_connection(reason, state.callbacks[:peer_delivery])
-        {:abort, reason}
+    if command.name == "PING" do
+      ZeroMQ.Heartbeat.ping_received(state.heartbeat, command)
+    else
+      case state.callbacks[:security_mechanism].(command, state.socket_type) do
+        {:ok, :complete} -> :ready
+        {:ok, :incomplete} -> state.phase
+        {:error, reason} ->
+          abort_connection(reason, state.callbacks[:peer_delivery])
+          {:abort, reason}
+      end
     end
   end
 
