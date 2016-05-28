@@ -220,8 +220,8 @@ defmodule ZeroMQ.ConnectionTest do
 
     Process.unlink(connection)
 
-    v2_greeting = to_string(%ZeroMQ.Greeting{mechanism: "SOMETHING_ELSE"})
-    ZeroMQ.Connection.notify(connection, v2_greeting)
+    bad_security_greeting = to_string(%ZeroMQ.Greeting{mechanism: "SOMETHING_ELSE"})
+    ZeroMQ.Connection.notify(connection, bad_security_greeting)
 
     refute Process.alive?(connection)
 
@@ -241,8 +241,8 @@ defmodule ZeroMQ.ConnectionTest do
 
     Process.unlink(connection)
 
-    v2_greeting = to_string(%ZeroMQ.Greeting{as_server: true})
-    ZeroMQ.Connection.notify(connection, v2_greeting)
+    as_server_greeting = to_string(%ZeroMQ.Greeting{as_server: true})
+    ZeroMQ.Connection.notify(connection, as_server_greeting)
 
     refute Process.alive?(connection)
 
