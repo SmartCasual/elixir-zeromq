@@ -1,6 +1,6 @@
 # ZeroMQ
 
-**TODO: Add description**
+Development abandoned.
 
 ## Installation
 
